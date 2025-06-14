@@ -23,8 +23,20 @@ func HandleChatConnections(w http.ResponseWriter, r *http.Request, hub *Hub) {
 
 	go hub.Run()
 
+	// Получаем имя пользователя из параметров запроса
+	queryParams := r.URL.Query()
+	name := "unknown"
+	if queryParams.Has("name") {
+		name = queryParams.Get("name")
+	}
+
+	client := &Client{
+		Name: name,
+		conn: ws,
+	}
+
 	// добавляем клиента
-	hub.ClientPipe <- Client{ws}
+	hub.ClientPipe <- client
 
 	for {
 		messageType, message, err := ws.ReadMessage()
@@ -37,6 +49,7 @@ func HandleChatConnections(w http.ResponseWriter, r *http.Request, hub *Hub) {
 		hub.MessagePipe <- &Message{
 			MessageType: messageType,
 			Message:     message,
+			Sender:      client,
 		}
 
 	}
