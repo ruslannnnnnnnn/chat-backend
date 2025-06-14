@@ -1,4 +1,4 @@
-package websocket_connection
+package wsc
 
 import (
 	"log"
@@ -12,12 +12,19 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func HandleConnections(w http.ResponseWriter, r *http.Request) {
+func HandleChatConnections(w http.ResponseWriter, r *http.Request, hub *Hub) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer ws.Close()
+
+	log.Println("подключился клиент", ws.RemoteAddr().String())
+
+	go hub.Run()
+
+	// добавляем клиента
+	hub.ClientPipe <- Client{ws}
 
 	for {
 		messageType, message, err := ws.ReadMessage()
@@ -25,11 +32,12 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			break
 		}
-		log.Printf("Received: %s ", message)
-
-		if err := ws.WriteMessage(messageType, message); err != nil {
-			log.Println(err)
-			break
+		log.Println("Пришло сообщение", string(message))
+		//отправляем сообщения
+		hub.MessagePipe <- &Message{
+			MessageType: messageType,
+			Message:     message,
 		}
+
 	}
 }
