@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -31,7 +32,13 @@ func HandleChatConnections(w http.ResponseWriter, r *http.Request, hub *Hub) {
 		name = queryParams.Get("name")
 	}
 
+	clientUuid, err := uuid.NewUUID()
+	if err != nil {
+		log.Fatal("Не удалось сгенерировать uuid")
+	}
+
 	client := &Client{
+		Id:   clientUuid.String(),
 		Name: name,
 		conn: ws,
 	}
@@ -39,10 +46,19 @@ func HandleChatConnections(w http.ResponseWriter, r *http.Request, hub *Hub) {
 	// добавляем клиента
 	hub.ClientPipe <- client
 
+	defer func() {
+		hub.DisconnectClientPipe <- client.Id
+		log.Println("Клиент отключился id:", client.Id, "ip:", client.conn.RemoteAddr())
+	}()
+
 	for {
 		messageType, message, err := ws.ReadMessage()
 		if err != nil {
-			log.Println(err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+				log.Println("Соединение закрыто с ошибкой, id клиента:", client.Id, "ошибка:", err.Error())
+			} else {
+				log.Println("Соединение закрыто, id клиента: ", client.Id)
+			}
 			break
 		}
 		log.Println("Пришло сообщение", string(message))
