@@ -38,5 +38,6 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }} --password-stdin"
             docker-compose -f ~/app/compose.yaml pull backend
             docker-compose -f ~/app/compose.yaml up -d backend
