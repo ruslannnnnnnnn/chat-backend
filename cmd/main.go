@@ -10,7 +10,7 @@ func main() {
 
 	hub := wsc.NewHub()
 
-	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/ws/chat", func(w http.ResponseWriter, r *http.Request) {
 		wsc.HandleChatConnections(w, r, hub)
 	})
 
